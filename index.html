@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Administrasi Kepegawaian</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: .5px; }
+    header span { font-size: .85rem; opacity: .85; }
+
+    /* ── Main layout ── */
+    main { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+
+    /* ── Stats bar ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      border-top: 4px solid var(--accent, #3b82f6);
+    }
+    .stat-card .number { font-size: 2rem; font-weight: 700; color: var(--accent, #3b82f6); }
+    .stat-card .label { font-size: .8rem; color: #718096; margin-top: 4px; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .toolbar input[type="search"] {
+      flex: 1;
+      min-width: 220px;
+      padding: 10px 16px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .toolbar input[type="search"]:focus { border-color: #3b82f6; }
+
+    .toolbar select {
+      padding: 10px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .9rem;
+      outline: none;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: #1e40af; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger  { background: #dc2626; color: #fff; }
+    .btn-danger:hover  { background: #b91c1c; }
+    .btn-secondary { background: #e2e8f0; color: #374151; }
+    .btn-secondary:hover { background: #cbd5e0; }
+    .btn-sm { padding: 6px 12px; font-size: .8rem; }
+
+    /* ── Employee table ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    thead {
+      background: #1e40af;
+      color: #fff;
+    }
+    thead th {
+      padding: 14px 16px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { background: #1d4ed8; }
+    tbody tr { border-bottom: 1px solid #f0f4f8; transition: background .15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #eff6ff; }
+    tbody td { padding: 12px 16px; vertical-align: middle; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+    }
+    .badge-active   { background: #dcfce7; color: #16a34a; }
+    .badge-inactive { background: #fee2e2; color: #dc2626; }
+    .badge-pension  { background: #fef9c3; color: #b45309; }
+
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #a0aec0;
+    }
+    .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: .4; }
+    .empty-state p { font-size: 1rem; }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,.3);
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 0;
+    }
+    .modal-header h2 { font-size: 1.1rem; font-weight: 700; color: #1e40af; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #718096;
+      line-height: 1;
+    }
+    .modal-close:hover { color: #1a202c; }
+
+    .modal-body { padding: 20px 24px 24px; }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: .85rem; font-weight: 600; color: #374151; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 9px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: #3b82f6; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* ── Document section inside modal ── */
+    .doc-section { margin-top: 24px; }
+    .doc-section h3 {
+      font-size: .95rem;
+      font-weight: 700;
+      color: #374151;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .doc-list { display: flex; flex-direction: column; gap: 8px; }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .doc-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name { font-size: .85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .doc-meta { font-size: .75rem; color: #718096; }
+    .doc-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .upload-area {
+      border: 2px dashed #cbd5e0;
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      margin-top: 8px;
+    }
+    .upload-area:hover { border-color: #3b82f6; background: #eff6ff; }
+    .upload-area input[type="file"] { display: none; }
+    .upload-area p { color: #718096; font-size: .85rem; margin-top: 6px; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e293b;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: .9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px;
+      border-top: 1px solid #f0f4f8;
+      font-size: .85rem;
+      color: #718096;
+    }
+    .pagination button {
+      padding: 6px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: .85rem;
+      transition: background .15s;
+    }
+    .pagination button:hover:not(:disabled) { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+    .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+    .pagination button.active { background: #1e40af; color: #fff; border-color: #1e40af; }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full { grid-column: 1; }
+      thead th:nth-child(4), tbody td:nth-child(4),
+      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📁 Sistem Administrasi Kepegawaian</h1>
+  <span id="headerDate"></span>
+</header>
+
+<main>
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card" style="--accent:#3b82f6">
+      <div class="number" id="statTotal">0</div>
+      <div class="label">Total Pegawai</div>
+    </div>
+    <div class="stat-card" style="--accent:#16a34a">
+      <div class="number" id="statActive">0</div>
+      <div class="label">Aktif</div>
+    </div>
+    <div class="stat-card" style="--accent:#dc2626">
+      <div class="number" id="statInactive">0</div>
+      <div class="label">Tidak Aktif</div>
+    </div>
+    <div class="stat-card" style="--accent:#b45309">
+      <div class="number" id="statPension">0</div>
+      <div class="label">Pensiun</div>
+    </div>
+    <div class="stat-card" style="--accent:#7c3aed">
+      <div class="number" id="statDocs">0</div>
+      <div class="label">Total Dokumen</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input type="search" id="searchInput" placeholder="🔍  Cari nama, NIP, jabatan, unit kerja…" oninput="renderTable()" />
+    <select id="filterStatus" onchange="renderTable()">
+      <option value="">Semua Status</option>
+      <option value="Aktif">Aktif</option>
+      <option value="Tidak Aktif">Tidak Aktif</option>
+      <option value="Pensiun">Pensiun</option>
+    </select>
+    <select id="filterUnit" onchange="renderTable()">
+      <option value="">Semua Unit Kerja</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddModal()">
+      ＋ Tambah Pegawai
+    </button>
+    <button class="btn btn-secondary" onclick="exportCSV()" title="Export ke CSV">
+      ⬇ Export CSV
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('nip')">NIP ↕</th>
+          <th onclick="sortBy('nama')">Nama ↕</th>
+          <th onclick="sortBy('jabatan')">Jabatan ↕</th>
+          <th onclick="sortBy('unitKerja')">Unit Kerja ↕</th>
+          <th onclick="sortBy('status')">Status ↕</th>
+          <th>Dokumen</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty-state" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <p>Belum ada data pegawai.<br>Klik <strong>Tambah Pegawai</strong> untuk memulai.</p>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</main>
+
+<!-- ── Modal Pegawai ── -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <h2 id="modalTitle">Tambah Pegawai</h2>
+      <button class="modal-close" onclick="closeModal()" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="pegawaiForm" onsubmit="submitForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="fNip">NIP <span style="color:#dc2626">*</span></label>
+            <input type="text" id="fNip" placeholder="Nomor Induk Pegawai" required />
+          </div>
+          <div class="form-group">
+            <label for="fNama">Nama Lengkap <span style="color:#dc2626">*</span></label>
+            <input type="text" id="fNama" placeholder="Nama lengkap" required />
+          </div>
+          <div class="form-group">
+            <label for="fTempatLahir">Tempat Lahir</label>
+            <input type="text" id="fTempatLahir" placeholder="Kota" />
+          </div>
+          <div class="form-group">
+            <label for="fTglLahir">Tanggal Lahir</label>
+            <input type="date" id="fTglLahir" />
+          </div>
+          <div class="form-group">
+            <label for="fJabatan">Jabatan <span style="color:#dc2626">*</span></label>
+            <input type="text" id="fJabatan" placeholder="Jabatan / Posisi" required />
+          </div>
+          <div class="form-group">
+            <label for="fUnitKerja">Unit Kerja <span style="color:#dc2626">*</span></label>
+            <input type="text" id="fUnitKerja" placeholder="Bagian / Divisi" required />
+          </div>
+          <div class="form-group">
+            <label for="fGolongan">Golongan / Pangkat</label>
+            <select id="fGolongan">
+              <option value="">— Pilih —</option>
+              <optgroup label="Golongan I">
+                <option>I/a – Juru Muda</option>
+                <option>I/b – Juru Muda Tk. I</option>
+                <option>I/c – Juru</option>
+                <option>I/d – Juru Tk. I</option>
+              </optgroup>
+              <optgroup label="Golongan II">
+                <option>II/a – Pengatur Muda</option>
+                <option>II/b – Pengatur Muda Tk. I</option>
+                <option>II/c – Pengatur</option>
+                <option>II/d – Pengatur Tk. I</option>
+              </optgroup>
+              <optgroup label="Golongan III">
+                <option>III/a – Penata Muda</option>
+                <option>III/b – Penata Muda Tk. I</option>
+                <option>III/c – Penata</option>
+                <option>III/d – Penata Tk. I</option>
+              </optgroup>
+              <optgroup label="Golongan IV">
+                <option>IV/a – Pembina</option>
+                <option>IV/b – Pembina Tk. I</option>
+                <option>IV/c – Pembina Utama Muda</option>
+                <option>IV/d – Pembina Utama Madya</option>
+                <option>IV/e – Pembina Utama</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fStatus">Status <span style="color:#dc2626">*</span></label>
+            <select id="fStatus" required>
+              <option value="Aktif">Aktif</option>
+              <option value="Tidak Aktif">Tidak Aktif</option>
+              <option value="Pensiun">Pensiun</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fTglMasuk">Tanggal Masuk</label>
+            <input type="date" id="fTglMasuk" />
+          </div>
+          <div class="form-group">
+            <label for="fEmail">Email</label>
+            <input type="email" id="fEmail" placeholder="email@contoh.com" />
+          </div>
+          <div class="form-group">
+            <label for="fTelp">No. Telepon</label>
+            <input type="tel" id="fTelp" placeholder="08xxxxxxxxxx" />
+          </div>
+          <div class="form-group full">
+            <label for="fAlamat">Alamat</label>
+            <textarea id="fAlamat" placeholder="Alamat lengkap pegawai"></textarea>
+          </div>
+          <div class="form-group full">
+            <label for="fCatatan">Catatan</label>
+            <textarea id="fCatatan" placeholder="Catatan tambahan (opsional)"></textarea>
+          </div>
+        </div>
+
+        <!-- Dokumen upload -->
+        <div class="doc-section" id="docSection">
+          <h3>📄 Dokumen Administrasi</h3>
+          <div class="doc-list" id="docList"></div>
+          <label class="upload-area" id="uploadArea">
+            <div style="font-size:2rem">📎</div>
+            <strong>Klik atau seret file ke sini</strong>
+            <p>PDF, Word, Excel, JPG, PNG (maks. 10 MB per file)</p>
+            <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" onchange="handleFileUpload(event)" />
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete confirm modal ── -->
+<div class="modal-overlay" id="deleteOverlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2 style="color:#dc2626">🗑 Hapus Pegawai</h2>
+      <button class="modal-close" onclick="closeDelete()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteMsg" style="margin-bottom:20px; line-height:1.6"></p>
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="closeDelete()">Batal</button>
+        <button class="btn btn-danger" onclick="confirmDelete()">Hapus</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Data store ──────────────────────────────────────────────
+const STORAGE_KEY = 'kepegawaian_v1';
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch (err) { console.error('Failed to parse kepegawaian data:', err); return []; }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let employees = loadData();
+
+// ── State ────────────────────────────────────────────────────
+let editId      = null;   // null = add, string = edit
+let deleteId    = null;
+let sortField   = 'nama';
+let sortDir     = 1;      // 1 = asc, -1 = desc
+let currentPage = 1;
+const PAGE_SIZE = 10;
+let pendingDocs = [];     // {name, size, type, dataUrl} for new uploads
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+// ── Helpers ──────────────────────────────────────────────────
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function docIcon(type) {
+  if (type.includes('pdf'))                                  return '📕';
+  if (type.includes('word') || type.includes('doc'))         return '📘';
+  if (type.includes('sheet') || type.includes('excel') || type.includes('xls')) return '📗';
+  if (type.includes('image'))                                return '🖼️';
+  return '📄';
+}
+
+function sanitizeText(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ── Stats ────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statTotal').textContent    = employees.length;
+  document.getElementById('statActive').textContent   = employees.filter(e => e.status === 'Aktif').length;
+  document.getElementById('statInactive').textContent = employees.filter(e => e.status === 'Tidak Aktif').length;
+  document.getElementById('statPension').textContent  = employees.filter(e => e.status === 'Pensiun').length;
+  document.getElementById('statDocs').textContent     = employees.reduce((s, e) => s + (e.docs ? e.docs.length : 0), 0);
+}
+
+// ── Unit filter dropdown ──────────────────────────────────────
+function refreshUnitFilter() {
+  const sel = document.getElementById('filterUnit');
+  const current = sel.value;
+  const units = [...new Set(employees.map(e => e.unitKerja).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Semua Unit Kerja</option>' +
+    units.map(u => `<option value="${sanitizeText(u)}"${u === current ? ' selected' : ''}>${sanitizeText(u)}</option>`).join('');
+}
+
+// ── Render table ──────────────────────────────────────────────
+function filtered() {
+  const q     = document.getElementById('searchInput').value.toLowerCase().trim();
+  const st    = document.getElementById('filterStatus').value;
+  const unit  = document.getElementById('filterUnit').value;
+
+  return employees.filter(e => {
+    const matchQ = !q ||
+      (e.nip        || '').toLowerCase().includes(q) ||
+      (e.nama       || '').toLowerCase().includes(q) ||
+      (e.jabatan    || '').toLowerCase().includes(q) ||
+      (e.unitKerja  || '').toLowerCase().includes(q);
+    const matchSt   = !st   || e.status    === st;
+    const matchUnit = !unit || e.unitKerja === unit;
+    return matchQ && matchSt && matchUnit;
+  }).sort((a, b) => {
+    const av = (a[sortField] || '').toLowerCase();
+    const bv = (b[sortField] || '').toLowerCase();
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = 1; }
+  renderTable();
+}
+
+function renderTable() {
+  const rows = filtered();
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > pages) currentPage = pages;
+
+  const slice = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const tbody = document.getElementById('tableBody');
+
+  if (total === 0) {
+    tbody.innerHTML = '';
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('pagination').innerHTML = '';
+    updateStats();
+    return;
+  }
+  document.getElementById('emptyState').style.display = 'none';
+
+  tbody.innerHTML = slice.map(e => {
+    const badgeCls = e.status === 'Aktif' ? 'badge-active' :
+                     e.status === 'Pensiun' ? 'badge-pension' : 'badge-inactive';
+    const docCount = e.docs ? e.docs.length : 0;
+    return `<tr>
+      <td>${sanitizeText(e.nip)}</td>
+      <td><strong>${sanitizeText(e.nama)}</strong></td>
+      <td>${sanitizeText(e.jabatan || '—')}</td>
+      <td>${sanitizeText(e.unitKerja || '—')}</td>
+      <td><span class="badge ${badgeCls}">${sanitizeText(e.status)}</span></td>
+      <td><span title="${docCount} dokumen">📄 ${docCount}</span></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick="openEditModal('${e.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="openDelete('${e.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  let pHtml = `<span>${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} dari ${total} pegawai</span>`;
+  pHtml += `<button onclick="goPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹ Prev</button>`;
+  for (let p = 1; p <= pages; p++) {
+    if (pages <= 7 || Math.abs(p - currentPage) <= 2 || p === 1 || p === pages) {
+      pHtml += `<button onclick="goPage(${p})" class="${p === currentPage ? 'active' : ''}">${p}</button>`;
+    } else if (Math.abs(p - currentPage) === 3) {
+      pHtml += `<span>…</span>`;
+    }
+  }
+  pHtml += `<button onclick="goPage(${currentPage + 1})" ${currentPage >= pages ? 'disabled' : ''}>Next ›</button>`;
+  document.getElementById('pagination').innerHTML = pHtml;
+
+  updateStats();
+  refreshUnitFilter();
+}
+
+function goPage(p) { currentPage = p; renderTable(); }
+
+// ── Modal open/close ──────────────────────────────────────────
+function openAddModal() {
+  editId = null;
+  pendingDocs = [];
+  document.getElementById('modalTitle').textContent = 'Tambah Pegawai';
+  document.getElementById('submitBtn').textContent  = 'Simpan';
+  document.getElementById('pegawaiForm').reset();
+  renderDocList([]);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const emp = employees.find(e => e.id === id);
+  if (!emp) return;
+  editId = id;
+  pendingDocs = (emp.docs || []).map(d => ({ ...d }));
+
+  document.getElementById('modalTitle').textContent = 'Edit Pegawai';
+  document.getElementById('submitBtn').textContent  = 'Perbarui';
+
+  document.getElementById('fNip').value         = emp.nip || '';
+  document.getElementById('fNama').value        = emp.nama || '';
+  document.getElementById('fTempatLahir').value = emp.tempatLahir || '';
+  document.getElementById('fTglLahir').value    = emp.tglLahir || '';
+  document.getElementById('fJabatan').value     = emp.jabatan || '';
+  document.getElementById('fUnitKerja').value   = emp.unitKerja || '';
+  document.getElementById('fGolongan').value    = emp.golongan || '';
+  document.getElementById('fStatus').value      = emp.status || 'Aktif';
+  document.getElementById('fTglMasuk').value    = emp.tglMasuk || '';
+  document.getElementById('fEmail').value       = emp.email || '';
+  document.getElementById('fTelp').value        = emp.telp || '';
+  document.getElementById('fAlamat').value      = emp.alamat || '';
+  document.getElementById('fCatatan').value     = emp.catatan || '';
+
+  renderDocList(pendingDocs);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  pendingDocs = [];
+}
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Form submit ───────────────────────────────────────────────
+function submitForm(e) {
+  e.preventDefault();
+
+  const nip  = document.getElementById('fNip').value.trim();
+  const nama = document.getElementById('fNama').value.trim();
+
+  // NIP uniqueness check (skip self when editing)
+  const duplicate = employees.find(emp => emp.nip === nip && emp.id !== editId);
+  if (duplicate) {
+    showToast('⚠️ NIP sudah digunakan pegawai lain!');
+    document.getElementById('fNip').focus();
+    return;
+  }
+
+  const record = {
+    id:          editId || uid(),
+    nip,
+    nama,
+    tempatLahir: document.getElementById('fTempatLahir').value.trim(),
+    tglLahir:    document.getElementById('fTglLahir').value,
+    jabatan:     document.getElementById('fJabatan').value.trim(),
+    unitKerja:   document.getElementById('fUnitKerja').value.trim(),
+    golongan:    document.getElementById('fGolongan').value,
+    status:      document.getElementById('fStatus').value,
+    tglMasuk:    document.getElementById('fTglMasuk').value,
+    email:       document.getElementById('fEmail').value.trim(),
+    telp:        document.getElementById('fTelp').value.trim(),
+    alamat:      document.getElementById('fAlamat').value.trim(),
+    catatan:     document.getElementById('fCatatan').value.trim(),
+    docs:        pendingDocs,
+    updatedAt:   new Date().toISOString(),
+  };
+
+  if (editId) {
+    const idx = employees.findIndex(e => e.id === editId);
+    employees[idx] = record;
+    showToast('✅ Data pegawai berhasil diperbarui.');
+  } else {
+    record.createdAt = new Date().toISOString();
+    employees.unshift(record);
+    showToast('✅ Pegawai baru berhasil ditambahkan.');
+  }
+
+  saveData(employees);
+  closeModal();
+  currentPage = 1;
+  renderTable();
+  refreshUnitFilter();
+}
+
+// ── Delete ────────────────────────────────────────────────────
+function openDelete(id) {
+  const emp = employees.find(e => e.id === id);
+  if (!emp) return;
+  deleteId = id;
+  document.getElementById('deleteMsg').innerHTML =
+    `Apakah Anda yakin ingin menghapus data pegawai <strong>${sanitizeText(emp.nama)}</strong> (NIP: ${sanitizeText(emp.nip)})?<br>
+     <span style="color:#dc2626;font-size:.85rem">Semua dokumen terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.</span>`;
+  document.getElementById('deleteOverlay').classList.add('open');
+}
+
+function closeDelete() {
+  document.getElementById('deleteOverlay').classList.remove('open');
+  deleteId = null;
+}
+
+document.getElementById('deleteOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeDelete();
+});
+
+function confirmDelete() {
+  employees = employees.filter(e => e.id !== deleteId);
+  saveData(employees);
+  closeDelete();
+  renderTable();
+  refreshUnitFilter();
+  showToast('🗑 Data pegawai berhasil dihapus.');
+}
+
+// ── File upload ────────────────────────────────────────────────
+function handleFileUpload(event) {
+  const files = Array.from(event.target.files);
+  const MAX_SIZE = MAX_FILE_SIZE;
+  let validCount = 0;
+  files.forEach(f => { if (f.size <= MAX_SIZE) validCount++; });
+
+  let loaded = 0;
+  files.forEach(file => {
+    if (file.size > MAX_SIZE) {
+      showToast(`⚠️ File "${file.name}" terlalu besar (maks. 10 MB).`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      pendingDocs.push({
+        id:      uid(),
+        name:    file.name,
+        size:    file.size,
+        type:    file.type,
+        dataUrl: ev.target.result,
+        addedAt: new Date().toISOString(),
+      });
+      loaded++;
+      if (loaded === validCount) {
+        renderDocList(pendingDocs);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+}
+
+function removeDoc(docId) {
+  pendingDocs = pendingDocs.filter(d => d.id !== docId);
+  renderDocList(pendingDocs);
+}
+
+function downloadDoc(docId) {
+  const doc = pendingDocs.find(d => d.id === docId);
+  if (!doc) return;
+  const a = document.createElement('a');
+  a.href = doc.dataUrl;
+  a.download = doc.name;
+  a.click();
+}
+
+function renderDocList(docs) {
+  const list = document.getElementById('docList');
+  if (docs.length === 0) {
+    list.innerHTML = '<p style="color:#a0aec0;font-size:.85rem;padding:4px 0">Belum ada dokumen diunggah.</p>';
+    return;
+  }
+  list.innerHTML = docs.map(d => `
+    <div class="doc-item">
+      <span class="doc-icon">${docIcon(d.type)}</span>
+      <div class="doc-info">
+        <div class="doc-name" title="${sanitizeText(d.name)}">${sanitizeText(d.name)}</div>
+        <div class="doc-meta">${formatBytes(d.size)} · ${formatDate(d.addedAt ? d.addedAt.split('T')[0] : '')}</div>
+      </div>
+      <div class="doc-actions">
+        <button class="btn btn-secondary btn-sm" onclick="downloadDoc('${d.id}')" title="Unduh">⬇</button>
+        <button class="btn btn-danger btn-sm" onclick="removeDoc('${d.id}')" title="Hapus">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Export CSV ────────────────────────────────────────────────
+function exportCSV() {
+  const rows = filtered();
+  if (rows.length === 0) { showToast('⚠️ Tidak ada data untuk diekspor.'); return; }
+
+  const headers = ['NIP','Nama','Jabatan','Unit Kerja','Golongan','Status','Tgl Masuk','Email','Telepon','Tempat Lahir','Tgl Lahir','Alamat','Catatan','Jml Dokumen'];
+  const escape  = v => `"${String(v || '').replace(/"/g, '""')}"`;
+  const csv     = [headers.map(escape).join(','),
+    ...rows.map(e => [
+      e.nip, e.nama, e.jabatan, e.unitKerja, e.golongan, e.status,
+      formatDate(e.tglMasuk), e.email, e.telp, e.tempatLahir,
+      formatDate(e.tglLahir), e.alamat, e.catatan,
+      e.docs ? e.docs.length : 0,
+    ].map(escape).join(','))
+  ].join('\r\n');
+
+  // BOM added so Excel correctly identifies the file as UTF-8
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `kepegawaian_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Data berhasil diekspor ke CSV.');
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeDelete(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); openAddModal(); }
+});
+
+// ── Header date ───────────────────────────────────────────────
+(function setDate() {
+  const now = new Date();
+  document.getElementById('headerDate').textContent = now.toLocaleDateString('id-ID', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+})();
+
+// ── Init ──────────────────────────────────────────────────────
+renderTable();
+refreshUnitFilter();
+updateStats();
+</script>
+</body>
+</html>
